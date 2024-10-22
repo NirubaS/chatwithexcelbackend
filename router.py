@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.responses import RedirectResponse # You'll need to replace this with your actual database module
-from aws_marketplace import resolve_customer 
+# from aws_marketplace import resolve_customer 
 from sqlalchemy import create_engine, Column, String, Text, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
@@ -11,8 +11,20 @@ import boto3
 import logging
 import json
 from botocore.exceptions import ClientError
-
-
+from fastapi import FastAPI, UploadFile, File, HTTPException
+from pydantic import BaseModel
+import pandas as pd
+import boto3
+import json
+from botocore.exceptions import ClientError
+import os
+from dotenv import load_dotenv
+import re
+import base64
+from typing import Optional, List, Dict, Any
+from io import StringIO
+import numpy as np
+from model import User, AWSMarketplaceInfo
 
 
 
@@ -69,12 +81,65 @@ engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 app=FastAPI()
+@app.get("/")
+async def root():
+    return {"message": "Server is running"}
+
 def get_db():
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
+
+
+
+
+
+
+# Load environment variables
+aws_access_key_id=os.getenv("aws_access_key")
+aws_secret_access_key=os.getenv("aws_secret_key")
+
+def resolve_customer(reg_token: str, db: Session):
+    try:
+        if reg_token:
+            marketplace_client = boto3.client(
+                "meteringmarketplace",
+                region_name="us-east-1",
+                aws_access_key_id=aws_access_key_id,
+                aws_secret_access_key=aws_secret_access_key,
+            )
+            customer_data = marketplace_client.resolve_customer(
+                RegistrationToken=reg_token
+            )
+            product_code = customer_data["ProductCode"]
+            customer_id = customer_data["CustomerIdentifier"]
+            customer_aws_account_id = customer_data["CustomerAWSAccountId"]
+            
+            # Check if the customer is already registered
+            aws_marketplace_info = db.query(AWSMarketplaceInfo).filter(AWSMarketplaceInfo.customer_id == customer_id).first()
+
+            if aws_marketplace_info:
+                return {"status": "redirect", "customer_id": aws_marketplace_info.id}
+            else:
+                # Register the customer
+                new_aws_marketplace_info = AWSMarketplaceInfo(
+                    product_code=product_code,
+                    customer_id=customer_id,
+                    customer_aws_account_id=customer_aws_account_id
+                )
+                db.add(new_aws_marketplace_info)
+                db.commit()
+                db.refresh(new_aws_marketplace_info)
+                return {"status": "redirect", "customer_id": new_aws_marketplace_info.id}
+
+        else:
+            return {"error": "Registration Token is missing"}
+
+    except Exception as e:
+        db.rollback()
+        return {"error": str(e)}
 
 @app.post("/resolve_customer")
 async def resolve_customer_handler(request: Request, db=Depends(get_db)):
@@ -97,3 +162,7 @@ async def resolve_customer_handler(request: Request, db=Depends(get_db)):
         return {"error": e.detail}
     except Exception as e:
         return {"error": str(e)}
+    
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
