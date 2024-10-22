@@ -1,0 +1,7 @@
+fastapi==0.103.1  # For creating the FastAPI application
+uvicorn==0.22.0  # For serving the FastAPI application
+boto3==1.28.13  # AWS SDK for Python to interact with AWS services
+botocore==1.31.13  # Low-level, core functionality for boto3
+SQLAlchemy==2.0.20  # For working with databases and ORM
+psycopg2-binary==2.9.7  # PostgreSQL database connection
+pydantic==1.10.12  # Data validation and settings management
