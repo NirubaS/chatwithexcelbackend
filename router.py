@@ -13,7 +13,6 @@ import json
 from botocore.exceptions import ClientError
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from pydantic import BaseModel
-import pandas as pd
 import boto3
 import json
 from botocore.exceptions import ClientError
@@ -23,7 +22,6 @@ import re
 import base64
 from typing import Optional, List, Dict, Any
 from io import StringIO
-import numpy as np
 from model import User, AWSMarketplaceInfo
 
 
