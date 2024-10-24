@@ -13,6 +13,7 @@ import json
 from botocore.exceptions import ClientError
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from pydantic import BaseModel
+import pandas as pd
 import boto3
 import json
 from botocore.exceptions import ClientError
@@ -22,6 +23,7 @@ import re
 import base64
 from typing import Optional, List, Dict, Any
 from io import StringIO
+import numpy as np
 from model import User, AWSMarketplaceInfo
 
 
@@ -90,12 +92,6 @@ def get_db():
     finally:
         db.close()
 
-
-
-
-
-
-# Load environment variables
 aws_access_key_id=os.getenv("aws_access_key")
 aws_secret_access_key=os.getenv("aws_secret_key")
 
@@ -116,18 +112,32 @@ def resolve_customer(reg_token: str, db: Session):
             customer_aws_account_id = customer_data["CustomerAWSAccountId"]
             
             # Check if the customer is already registered
-            aws_marketplace_info = db.query(AWSMarketplaceInfo).filter(AWSMarketplaceInfo.customer_id == customer_id).first()
+            aws_marketplace_info = db.query(AWSMarketplaceInfo).filter(
+                AWSMarketplaceInfo.customer_id == customer_id
+            ).first()
 
             if aws_marketplace_info:
+                # Get user and update customer_id
+                user = db.query(User).first()  # Get the user
+                if user:
+                    user.customer_id = aws_marketplace_info.id  # Using the id from product_customers
+                    db.commit()
                 return {"status": "redirect", "customer_id": aws_marketplace_info.id}
             else:
-                # Register the customer
+                # Create new AWS Marketplace Info
                 new_aws_marketplace_info = AWSMarketplaceInfo(
                     product_code=product_code,
                     customer_id=customer_id,
                     customer_aws_account_id=customer_aws_account_id
                 )
                 db.add(new_aws_marketplace_info)
+                db.flush()  # Get the id before committing
+                
+                # Update user table with customer_id
+                user = db.query(User).first()  # Get the user
+                if user:
+                    user.customer_id = new_aws_marketplace_info.id  # Using the id from product_customers
+                
                 db.commit()
                 db.refresh(new_aws_marketplace_info)
                 return {"status": "redirect", "customer_id": new_aws_marketplace_info.id}
@@ -138,7 +148,8 @@ def resolve_customer(reg_token: str, db: Session):
     except Exception as e:
         db.rollback()
         return {"error": str(e)}
-
+    
+    
 @app.post("/resolve_customer")
 async def resolve_customer_handler(request: Request, db=Depends(get_db)):
     try:
@@ -161,4 +172,6 @@ async def resolve_customer_handler(request: Request, db=Depends(get_db)):
     except Exception as e:
         return {"error": str(e)}
     
-
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
