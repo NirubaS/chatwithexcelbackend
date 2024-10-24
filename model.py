@@ -11,10 +11,14 @@ class User(Base):
     username = Column(String(50), nullable=False)
     email = Column(String(100), unique=True, nullable=False)
     password = Column(String(255), nullable=False)
-    customer_id = Column(String(100), ForeignKey('product_customers.customer_id'))
+    customer_id = Column(Integer, ForeignKey('product_customers.id'), unique=True)
     
     # Relationship
-    aws_marketplace_info = relationship("AWSMarketplaceInfo", back_populates="users")
+    aws_marketplace_info = relationship(
+        "AWSMarketplaceInfo",
+        back_populates="user",
+        uselist=False
+    )
 
 class AWSMarketplaceInfo(Base):
     __tablename__ = 'product_customers'
@@ -25,4 +29,8 @@ class AWSMarketplaceInfo(Base):
     customer_aws_account_id = Column(String(100), nullable=False)
     
     # Relationship
-    users = relationship("User", back_populates="aws_marketplace_info")
+    user = relationship(
+        "User",
+        back_populates="aws_marketplace_info",
+        uselist=False
+    )
