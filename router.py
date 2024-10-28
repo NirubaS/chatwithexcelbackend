@@ -133,10 +133,10 @@ def resolve_customer(reg_token: str, db: Session):
                 db.add(new_aws_marketplace_info)
                 db.flush()  # Get the id before committing
                 
-                # Update user table with customer_id
-                user = db.query(User).first()  # Get the user
-                if user:
-                    user.customer_id = new_aws_marketplace_info.id  # Using the id from product_customers
+                # # Update user table with customer_id
+                # user = db.query(User).first()  # Get the user
+                # if user:
+                #     user.customer_id = new_aws_marketplace_info.id  # Using the id from product_customers
                 
                 db.commit()
                 db.refresh(new_aws_marketplace_info)
