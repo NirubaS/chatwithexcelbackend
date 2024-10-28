@@ -12,7 +12,6 @@ from botocore.exceptions import ClientError
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 from model import User, AWSMarketplaceInfo
-from mangum import Mangum
 from dotenv import load_dotenv
 
 # Load environment variables
