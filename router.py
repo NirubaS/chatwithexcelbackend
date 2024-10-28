@@ -69,8 +69,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Configure AWS Lambda handler
-handler = Mangum(app)
+
 
 # Database dependency
 def get_db():
